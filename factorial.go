@@ -45,9 +45,15 @@ func createJson(a, b int, arr []int) []byte {
 			answ.B = arr[0]
 		}
 	}
+	if arr[0] > 0 && arr[1] > 0 {
+		newJson, _ := json.Marshal(answ)
+		return newJson
+	} else {
+		e := Message{Err: "Inncorrect input, big number"}
+		je, _ := json.Marshal(e)
+		return je
+	}
 
-	newJson, _ := json.Marshal(answ)
-	return newJson
 }
 
 func calculateFactorial(n int, c chan int) {
@@ -103,13 +109,18 @@ func Calculate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		w.WriteHeader(400)
 		fmt.Fprintln(w, string(je))
 	} else {
-		fmt.Fprintln(w, string(calculate(req.A, req.B)))
+		if string(calculate(req.A, req.B)) == `{"error":"Inncorrect input, big number"}` {
+			w.WriteHeader(400)
+			fmt.Fprintln(w, string(calculate(req.A, req.B)))
+		} else {
+			fmt.Fprintln(w, string(calculate(req.A, req.B)))
+		}
 	}
 }
 
 func main() {
 	router := httprouter.New()
 	router.GET("/calculate", Calculate)
-
+	fmt.Println("Server listening!")
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
