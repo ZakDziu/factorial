@@ -122,5 +122,5 @@ func main() {
 	router := httprouter.New()
 	router.GET("/calculate", Calculate)
 	fmt.Println("Server listening!")
-	log.Fatal(http.ListenAndServe(":8080", router))
+	log.Fatal(http.ListenAndServe(":8989", router))
 }
