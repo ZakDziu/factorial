@@ -49,7 +49,7 @@ func createJson(a, b int, arr []int) []byte {
 		newJson, _ := json.Marshal(answ)
 		return newJson
 	} else {
-		e := Message{Err: "Inncorrect input, big number"}
+		e := Message{Err: "Incorrect input, big number"}
 		je, _ := json.Marshal(e)
 		return je
 	}
@@ -101,7 +101,7 @@ func Calculate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	}
 
 	if req.A <= 0 || req.B <= 0 {
-		e := Message{Err: "Inncorrect input"}
+		e := Message{Err: "Incorrect input"}
 		je, error := json.Marshal(e)
 		if error != nil {
 			fmt.Fprintln(w, error.Error())
@@ -109,7 +109,7 @@ func Calculate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		w.WriteHeader(400)
 		fmt.Fprintln(w, string(je))
 	} else {
-		if string(calculate(req.A, req.B)) == `{"error":"Inncorrect input, big number"}` {
+		if string(calculate(req.A, req.B)) == `{"error":"Incorrect input, big number"}` {
 			w.WriteHeader(400)
 			fmt.Fprintln(w, string(calculate(req.A, req.B)))
 		} else {
