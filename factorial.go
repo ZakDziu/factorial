@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -55,7 +54,6 @@ func calculate(a, b int) ([]byte, error) {
 		return nil, errors.New(`{"error": "Incorrect message"}`)
 	}
 	c := make(chan int)
-	until := time.After(1 * time.Second)
 	arr := []int{}
 
 	go calculateFactorial(a, c)
@@ -65,7 +63,8 @@ func calculate(a, b int) ([]byte, error) {
 		select {
 		case val := <-c:
 			arr = append(arr, val)
-		case <-until:
+		}
+		if len(arr) == 4 {
 			answ, err := createJson(a, b, arr)
 			if err != nil {
 				return nil, err
