@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -21,38 +22,20 @@ type Input struct {
 	B int `json:"b"`
 }
 
-type Message struct {
-	Err string `json:"error"`
-}
-
-func createJson(a, b int, arr []int) []byte {
+func createJson(a, b int, arr []int) ([]byte, error) {
 	var answ answJson
 
-	if a > b {
-		if arr[0] > arr[1] {
-			answ.A = arr[0]
-			answ.B = arr[1]
-		} else {
-			answ.A = arr[1]
-			answ.B = arr[0]
-		}
-	} else {
-		if arr[0] < arr[1] {
-			answ.A = arr[0]
-			answ.B = arr[1]
-		} else {
-			answ.A = arr[1]
-			answ.B = arr[0]
-		}
+	if arr[0] == a {
+		answ.A = arr[1]
+		answ.B = arr[3]
 	}
-	if arr[0] > 0 && arr[1] > 0 {
-		newJson, _ := json.Marshal(answ)
-		return newJson
-	} else {
-		e := Message{Err: "Incorrect input, big number"}
-		je, _ := json.Marshal(e)
-		return je
+	answ.A = arr[3]
+	answ.B = arr[1]
+	if answ.A <= 0 || answ.B <= 0 {
+		return nil, errors.New(`{"error": "Incorrect message, very big number"}`)
 	}
+	newJson, _ := json.Marshal(answ)
+	return newJson, nil
 
 }
 
@@ -62,13 +45,16 @@ func calculateFactorial(n int, c chan int) {
 	for i := 1; i <= n; i++ {
 		factorial *= i
 	}
-
+	c <- n
 	c <- factorial
 
 }
 
-func calculate(a, b int) []byte {
-	c := make(chan int, 2)
+func calculate(a, b int) ([]byte, error) {
+	if a <= 0 || b <= 0 {
+		return nil, errors.New(`{"error": "Incorrect message"}`)
+	}
+	c := make(chan int)
 	until := time.After(1 * time.Second)
 	arr := []int{}
 
@@ -80,7 +66,11 @@ func calculate(a, b int) []byte {
 		case val := <-c:
 			arr = append(arr, val)
 		case <-until:
-			return createJson(a, b, arr)
+			answ, err := createJson(a, b, arr)
+			if err != nil {
+				return nil, err
+			}
+			return answ, nil
 		}
 	}
 }
@@ -100,22 +90,14 @@ func Calculate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		fmt.Fprintln(w, error.Error())
 	}
 
-	if req.A <= 0 || req.B <= 0 {
-		e := Message{Err: "Incorrect input"}
-		je, error := json.Marshal(e)
-		if error != nil {
-			fmt.Fprintln(w, error.Error())
-		}
-		w.WriteHeader(400)
-		fmt.Fprintln(w, string(je))
-	} else {
-		if string(calculate(req.A, req.B)) == `{"error":"Incorrect input, big number"}` {
-			w.WriteHeader(400)
-			fmt.Fprintln(w, string(calculate(req.A, req.B)))
-		} else {
-			fmt.Fprintln(w, string(calculate(req.A, req.B)))
-		}
+	response, err := calculate(req.A, req.B)
+
+	if err != nil {
+		http.Error(w, err.Error(), 400)
 	}
+
+	fmt.Fprintln(w, string(response))
+
 }
 
 func main() {
