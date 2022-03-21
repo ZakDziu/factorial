@@ -11,7 +11,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-type answJson struct {
+type Output struct {
 	A int `json:"a!"`
 	B int `json:"b!"`
 }
@@ -21,8 +21,8 @@ type Input struct {
 	B int `json:"b"`
 }
 
-func createJson(a, b int, arr []int) ([]byte, error) {
-	var answ answJson
+func createJson(a int, arr []int) ([]byte, error) {
+	var answ Output
 
 	if arr[0] == a {
 		answ.A = arr[1]
@@ -30,9 +30,11 @@ func createJson(a, b int, arr []int) ([]byte, error) {
 	}
 	answ.A = arr[3]
 	answ.B = arr[1]
-	if answ.A <= 0 || answ.B <= 0 {
-		return nil, errors.New(`{"error": "Incorrect message, very big number"}`)
+
+	if arr[1] <= 0 || arr[3] <= 0 {
+		return nil, errors.New(`{"error": "Incorrect input, very big number"}`)
 	}
+
 	newJson, _ := json.Marshal(answ)
 	return newJson, nil
 
@@ -58,14 +60,14 @@ func calculate(a, b int) ([]byte, error) {
 
 	go calculateFactorial(a, c)
 	go calculateFactorial(b, c)
-
+	defer close(c)
 	for {
 		select {
 		case val := <-c:
 			arr = append(arr, val)
 		}
 		if len(arr) == 4 {
-			answ, err := createJson(a, b, arr)
+			answ, err := createJson(a, arr)
 			if err != nil {
 				return nil, err
 			}
@@ -78,19 +80,16 @@ func Calculate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var req Input
 
 	body, error := ioutil.ReadAll(r.Body)
-
 	if error != nil {
-		fmt.Fprintln(w, error.Error())
+		http.Error(w, error.Error(), 400)
 	}
 
 	error = json.Unmarshal(body, &req)
-
 	if error != nil {
 		fmt.Fprintln(w, error.Error())
 	}
 
 	response, err := calculate(req.A, req.B)
-
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 	}
