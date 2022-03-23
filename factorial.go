@@ -32,7 +32,7 @@ var wg sync.WaitGroup
 func (num *Number) Factorial(a, b int) *Number {
 	start := time.Now()
 	for {
-		num.answ = num.answ + 1
+		num.answ = a
 		for i := a; i <= b; i++ {
 			num.answ *= i
 			if time.Since(start) > 3*time.Second {
@@ -68,6 +68,7 @@ func calculate(a, b int) ([]byte, error, int) {
 
 	go factA.Factorial(1, a)
 	go factB.Factorial(1, b)
+
 	wg.Add(2)
 	wg.Wait()
 
