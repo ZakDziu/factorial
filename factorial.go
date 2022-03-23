@@ -83,7 +83,7 @@ func calculate(a, b int) ([]byte, error, int) {
 
 func Calculate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var req Input
-	err := errors.New(`{"error": "Incorrect message"}`)
+	err := err()
 	body, error := ioutil.ReadAll(r.Body)
 	if error != nil {
 		http.Error(w, err.Error(), 400)
