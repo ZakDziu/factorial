@@ -7,9 +7,9 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"sync"
 
 	"github.com/julienschmidt/httprouter"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -18,15 +18,13 @@ const (
 )
 
 var (
-	errIncorrectMessage   = errors.New(`{"error": "Incorrect message"}`)
-	errServiceUnavailable = errors.New(`{"error": "Service error"}`)
+	ErrIncorrectMessage   = errors.New(`{"error": "Incorrect message"}`)
+	ErrServiceUnavailable = errors.New(`{"error": "Service error"}`)
 )
 
 type Answer struct {
-	A    int `json:"a!"`
-	B    int `json:"b!"`
-	errA error
-	errB error
+	A int `json:"a!"`
+	B int `json:"b!"`
 }
 
 type Request struct {
@@ -34,10 +32,10 @@ type Request struct {
 	B int `json:"b"`
 }
 
-func calculateFactorial(to int) (int, error) {
+func CalculateFactorial(to int) (int, error) {
 	factorial := 1
 	if to > maxIntegerFactorial || to <= minIntegerFactorial {
-		return 0, errIncorrectMessage
+		return 0, ErrIncorrectMessage
 	}
 
 	for i := 1; i <= to; i++ {
@@ -47,52 +45,48 @@ func calculateFactorial(to int) (int, error) {
 	return factorial, nil
 }
 
-func calculate(a, b int) (string, error, int) {
+func calculateF(a, b int) (string, int, error) {
 	answ := &Answer{}
-	wg := &sync.WaitGroup{}
+	group := new(errgroup.Group)
+	var err error
+	group.Go(func() error {
+		answ.A, err = CalculateFactorial(a)
+		return err
+	})
 
-	wg.Add(2)
+	group.Go(func() error {
+		answ.B, err = CalculateFactorial(b)
+		return err
+	})
 
-	go func() {
-		defer wg.Done()
-		answ.A, answ.errA = calculateFactorial(a)
-	}()
-
-	go func() {
-		defer wg.Done()
-		answ.B, answ.errB = calculateFactorial(b)
-	}()
-
-	wg.Wait()
-
-	if answ.errA != nil || answ.errB != nil {
-		return "", errIncorrectMessage, http.StatusBadRequest
+	if err := group.Wait(); err != nil {
+		return "", http.StatusBadRequest, ErrIncorrectMessage
 	}
 
 	newJson, err := json.Marshal(answ)
 	if err != nil {
-		return "", errServiceUnavailable, http.StatusInternalServerError
+		return "", http.StatusInternalServerError, ErrServiceUnavailable
 	}
 
-	return string(newJson), nil, http.StatusAccepted
+	return string(newJson), http.StatusAccepted, nil
 }
 
-func Calculate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func calculate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var req Request
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, errServiceUnavailable.Error(), http.StatusInternalServerError)
+		http.Error(w, ErrServiceUnavailable.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	err = json.Unmarshal(body, &req)
 	if err != nil {
-		http.Error(w, errIncorrectMessage.Error(), http.StatusBadRequest)
+		http.Error(w, ErrIncorrectMessage.Error(), http.StatusBadRequest)
 		return
 	}
 
-	response, err, statusCode := calculate(req.A, req.B)
+	response, statusCode, err := calculateF(req.A, req.B)
 	if err != nil {
 		http.Error(w, err.Error(), statusCode)
 		return
@@ -102,9 +96,13 @@ func Calculate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
 }
 
-func main() {
+func router() *httprouter.Router {
 	router := httprouter.New()
-	router.GET("/calculate", Calculate)
+	router.GET("/calculate", calculate)
+	return router
+}
+
+func main() {
 	fmt.Println("Server listening!")
-	log.Fatal(http.ListenAndServe(":8989", router))
+	log.Fatal(http.ListenAndServe(":8989", router()))
 }
