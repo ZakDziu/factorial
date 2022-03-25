@@ -12,33 +12,26 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-var wg sync.WaitGroup
+const (
+	maxIntegerFactorial = 20
+	minIntegerFactorial = 0
+)
 
-const maxIntegerFactorial = 20
-const minIntegerFactorial = 0
+var (
+	errIncorrectMessage   = errors.New(`{"error": "Incorrect message"}`)
+	errServiceUnavailable = errors.New(`{"error": "Service error"}`)
+)
 
-var errIncorrectMessage = errors.New(`{"error": "Incorrect message"}`)
-var errServiceUnavailable = errors.New(`{"error": "Service error"}`)
-
-type output struct {
-	A int `json:"a!"`
-	B int `json:"b!"`
+type Answer struct {
+	A    int `json:"a!"`
+	B    int `json:"b!"`
+	errA error
+	errB error
 }
 
-type input struct {
+type Request struct {
 	A int `json:"a"`
 	B int `json:"b"`
-}
-
-type number struct {
-	answ int
-	err  error
-}
-
-func (num *number) factorial(to int) *number {
-	num.answ, num.err = calculateFactorial(to)
-	defer wg.Done()
-	return num
 }
 
 func calculateFactorial(to int) (int, error) {
@@ -55,21 +48,26 @@ func calculateFactorial(to int) (int, error) {
 }
 
 func calculate(a, b int) (string, error, int) {
-	var answ output
-	var factA = new(number)
-	var factB = new(number)
+	answ := &Answer{}
+	wg := &sync.WaitGroup{}
 
 	wg.Add(2)
-	go factA.factorial(a)
-	go factB.factorial(b)
+
+	go func() {
+		defer wg.Done()
+		answ.A, answ.errA = calculateFactorial(a)
+	}()
+
+	go func() {
+		defer wg.Done()
+		answ.B, answ.errB = calculateFactorial(b)
+	}()
+
 	wg.Wait()
 
-	if factA.err != nil || factB.err != nil {
+	if answ.errA != nil || answ.errB != nil {
 		return "", errIncorrectMessage, http.StatusBadRequest
 	}
-
-	answ.A = factA.answ
-	answ.B = factB.answ
 
 	newJson, err := json.Marshal(answ)
 	if err != nil {
@@ -80,7 +78,7 @@ func calculate(a, b int) (string, error, int) {
 }
 
 func Calculate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	var req input
+	var req Request
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
