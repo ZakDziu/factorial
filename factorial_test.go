@@ -129,7 +129,10 @@ func TestServer(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(*testing.T) {
-			req, _ := http.NewRequest("GET", "/calculate", bytes.NewBuffer(tc.body))
+			req, err := http.NewRequest("GET", "/calculate", bytes.NewBuffer(tc.body))
+			if err != nil {
+				t.Errorf("Error on request: %v", err)
+			}
 			rr := httptest.NewRecorder()
 
 			router.ServeHTTP(rr, req)

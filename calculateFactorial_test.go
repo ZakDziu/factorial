@@ -44,8 +44,8 @@ func Test_ClaculateFactorial(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got, err := CalculateFactorial(tt.arg); got != tt.want || err != tt.err {
-				t.Errorf("calculateFactorial() = %v with error %v, want %v with %v", got, err, tt.want, tt.err)
+			if got, err := calculateFactorial(tt.arg); got != tt.want || err != tt.err {
+				t.Errorf("calculateFactorial() = %v with error %v, want %v with error %v", got, err, tt.want, tt.err)
 			}
 		})
 	}

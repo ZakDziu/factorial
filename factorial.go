@@ -32,7 +32,7 @@ type Request struct {
 	B int `json:"b"`
 }
 
-func CalculateFactorial(to int) (int, error) {
+func calculateFactorial(to int) (int, error) {
 	factorial := 1
 	if to > maxIntegerFactorial || to <= minIntegerFactorial {
 		return 0, ErrIncorrectMessage
@@ -50,13 +50,15 @@ func calculateF(a, b int) (string, int, error) {
 	group := new(errgroup.Group)
 	var err error
 	group.Go(func() error {
-		answ.A, err = CalculateFactorial(a)
-		return err
-	})
-
-	group.Go(func() error {
-		answ.B, err = CalculateFactorial(b)
-		return err
+		answ.A, err = calculateFactorial(a)
+		if err != nil {
+			return err
+		}
+		answ.B, err = calculateFactorial(b)
+		if err != nil {
+			return err
+		}
+		return nil
 	})
 
 	if err := group.Wait(); err != nil {
