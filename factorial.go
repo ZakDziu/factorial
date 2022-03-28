@@ -34,6 +34,7 @@ type Request struct {
 
 func calculateFactorial(to int) (int, error) {
 	factorial := 1
+
 	if to > maxIntegerFactorial || to <= minIntegerFactorial {
 		return 0, ErrIncorrectMessage
 	}
@@ -48,7 +49,9 @@ func calculateFactorial(to int) (int, error) {
 func calculateF(a, b int) (string, int, error) {
 	answ := &Answer{}
 	group := new(errgroup.Group)
+
 	var err error
+
 	group.Go(func() error {
 		answ.A, err = calculateFactorial(a)
 		if err != nil {
@@ -58,6 +61,7 @@ func calculateF(a, b int) (string, int, error) {
 		if err != nil {
 			return err
 		}
+
 		return nil
 	})
 
@@ -65,12 +69,12 @@ func calculateF(a, b int) (string, int, error) {
 		return "", http.StatusBadRequest, ErrIncorrectMessage
 	}
 
-	newJson, err := json.Marshal(answ)
+	newJSON, err := json.Marshal(answ)
 	if err != nil {
 		return "", http.StatusInternalServerError, ErrServiceUnavailable
 	}
 
-	return string(newJson), http.StatusAccepted, nil
+	return string(newJSON), http.StatusAccepted, nil
 }
 
 func calculate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -79,28 +83,31 @@ func calculate(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, ErrServiceUnavailable.Error(), http.StatusInternalServerError)
+
 		return
 	}
 
 	err = json.Unmarshal(body, &req)
 	if err != nil {
 		http.Error(w, ErrIncorrectMessage.Error(), http.StatusBadRequest)
+
 		return
 	}
 
 	response, statusCode, err := calculateF(req.A, req.B)
 	if err != nil {
 		http.Error(w, err.Error(), statusCode)
+
 		return
 	}
 
 	fmt.Fprintln(w, response)
-
 }
 
 func router() *httprouter.Router {
 	router := httprouter.New()
 	router.GET("/calculate", calculate)
+
 	return router
 }
 

@@ -2,13 +2,13 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/kinbiko/jsonassert"
-
 	"github.com/julienschmidt/httprouter"
+	"github.com/kinbiko/jsonassert"
 )
 
 func TestServer(t *testing.T) {
@@ -129,7 +129,7 @@ func TestServer(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(*testing.T) {
-			req, err := http.NewRequest("GET", "/calculate", bytes.NewBuffer(tc.body))
+			req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "/calculate", bytes.NewBuffer(tc.body))
 			if err != nil {
 				t.Errorf("Error on request: %v", err)
 			}
